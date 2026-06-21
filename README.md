@@ -1,2 +1,120 @@
 # deployment_data_microservice
-Prework for _Zapier AI Pair Programming round
+
+Prework for _Zapier AI Pair Programming round_
+
+A small FastAPI microservice that tracks deployment records in memory. It exposes REST endpoints to list, filter, and fetch deployments, with seed data generated on startup.
+
+---
+
+## Setup
+
+Run these commands on any machine with **Python 3.10+** installed.
+
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd deployment_data_microservice
+
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate        # macOS / Linux
+# .venv\Scripts\activate         # Windows (PowerShell)
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The API will be available at `http://localhost:8000`.
+
+To stop the server, press `Ctrl+C` in the terminal.
+
+---
+
+## Accessing the APIs
+
+### Interactive docs (Swagger UI)
+
+Open in a browser:
+
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check |
+| `GET` | `/deployments` | List all deployments (optional filters) |
+| `GET` | `/deployments/{deployment_id}` | Get a single deployment by ID |
+
+### Query parameters (`GET /deployments`)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `service` | string (optional) | Filter by service name (e.g. `billing-api`) |
+| `status` | string (optional) | Filter by status: `success`, `failed`, or `rolled_back` |
+
+### Example requests
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# List all deployments
+curl http://localhost:8000/deployments
+
+# Filter by service
+curl "http://localhost:8000/deployments?service=billing-api"
+
+# Filter by status
+curl "http://localhost:8000/deployments?status=success"
+
+# Filter by both service and status
+curl "http://localhost:8000/deployments?service=auth-service&status=failed"
+
+# Get a single deployment by ID
+curl http://localhost:8000/deployments/deploy_001
+```
+
+### Example responses
+
+**`GET /health`**
+
+```json
+{"status": "ok"}
+```
+
+**`GET /deployments/deploy_001`**
+
+```json
+{
+  "id": "deploy_001",
+  "service": "billing-api",
+  "status": "success",
+  "duration": 420,
+  "timestamp": "2026-06-22T14:30:00Z",
+  "commit_sha": "a1b2c3"
+}
+```
+
+**`GET /deployments/unknown-id`** returns `404` with:
+
+```json
+{"detail": "Deployment not found"}
+```
+
+---
+
+## Project files
+
+| File | Description |
+|------|-------------|
+| `README.md` | Project documentation (setup, API usage, file overview). |
+| `requirements.txt` | Python dependencies: FastAPI, Uvicorn, and Pydantic. |
+| `app/main.py` | FastAPI application entry point. Defines HTTP routes (`/health`, `/deployments`), loads seed data on startup, and delegates business logic to the store. |
+| `app/models.py` | Pydantic data models. Defines the `Deployment` schema and allowed `status` values (`success`, `failed`, `rolled_back`). |
+| `app/store.py` | In-memory data store (`DeploymentStore`). Handles loading, listing (with optional filters), and fetching deployments by ID. |
+| `app/seed.py` | Generates deterministic sample deployment data (35 records across 4 services) used to populate the store on startup. |
