@@ -1,7 +1,7 @@
 # main.py - HTTP LAYER ONLY
 # Routes stay thin; logic lives in store/ and services/
 
-from typing import List, Optional
+from typing import List, Optional, Literal
 # List = return type of multiple deployments
 # Optional = query filters may be omitted (None = no filter)
 
@@ -24,6 +24,8 @@ app = FastAPI(
 )
 
 store = DeploymentStore()
+Deployement_Status = Literal["success", "failed", "rolled_back"]
+Deployment_Service = Literal["billing-api","auth-service","notifications","frontend-web"]
 
 """ Load seed data on startup """
 @app.on_event("startup")
@@ -35,8 +37,8 @@ def on_startup() -> None:
 """ List all deployments, optionally filtered by service or status """
 @app.get("/deployments", response_model=List[Deployment])
 def list_deployments(
-    service: Optional[str] = Query(None, description="Filter by service"),
-    status: Optional[str] = Query(None, description="Filter by status"),
+    service: Optional[Deployment_Service] = Query(None, description="Filter by service"),
+    status: Optional[Deployement_Status] = Query(None, description="Filter by status"),
 ) -> List[Deployment]:
     return store.list(service=service, status=status)
 
