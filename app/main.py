@@ -31,3 +31,24 @@ def on_startup() -> None:
     raw = generate_deployements()
     deployments = [Deployment(**item) for item in raw]
     store.load(deployments)
+
+""" List all deployments, optionally filtered by service or status """
+@app.get("/deployments", response_model=List[Deployment])
+def list_deployments(
+    service: Optional[str] = Query(None, description="Filter by service"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+) -> List[Deployment]:
+    return store.list(service=service, status=status)
+
+""" Get a deployment by ID """
+@app.get("/deployments/{deployment_id}", response_model=Deployment)
+def get_deployment(deployment_id: str) -> Deployment:
+    deployment = store.get(deployment_id)
+    if deployment is None:
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    return deployment
+
+""" Health check """
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
