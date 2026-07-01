@@ -10,9 +10,10 @@ from fastapi import FastAPI, HTTPException, Query
 # HTTPException = raise 404, 400 with JSON {"detail": "..."}
 # Query = declare ?service= or ?status= parameters in URL
 
-from .models import Deployment
+from .models import Deployment, MetricData
 from .seed import generate_deployements
 from .store import DeploymentStore
+from services.metrics import DEFAULT_TIME_RANGE, MetricOps
 
 # =============================================================================
 # FastAPI app setup
@@ -24,6 +25,7 @@ app = FastAPI(
 )
 
 store = DeploymentStore()
+metric_ops = MetricOps()
 Deployement_Status = Literal["success", "failed", "rolled_back"]
 Deployment_Service = Literal["billing-api","auth-service","notifications","frontend-web"]
 
@@ -49,6 +51,20 @@ def get_deployment(deployment_id: str) -> Deployment:
     if deployment is None:
         raise HTTPException(status_code=404, detail="Deployment not found")
     return deployment
+
+""" Per-service deployment metrics over a rolling time window """
+@app.get("/metrics", response_model=List[MetricData])
+def get_metrics(
+    time_range: int = Query(
+        DEFAULT_TIME_RANGE,
+        ge=1,
+        description="Rolling window in days",
+    ),
+) -> List[MetricData]:
+    try:
+        return metric_ops.calculate_metrics(store, time_range=time_range)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 """ Health check """
 @app.get("/health")

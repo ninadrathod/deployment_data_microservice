@@ -10,13 +10,13 @@ random.seed(30)
 SERVICES = ["billing-api","auth-service","notifications","frontend-web"]
 STATUSES = ["success","failed","rolled_back"]
 
-def generate_deployements(count: int = 35) -> List[dict]:
+def generate_deployements(count: int = 35) -> list[dict]:
     """ Generate a list of deployments """
-    base = datetime(2026, 6, 21, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
     out = []
     for i in range(count):
-        # Generate a random deployment time somewhere within the first 28 days after your start date.
-        ts = base + timedelta(hours=random.randint(0, 28*24))
+        # Random deployment time within the past 28 days.
+        ts = now - timedelta(hours=random.randint(0, 28 * 24))
         out.append({
             "id": f"deploy_{i:03d}", # produces deploy_001, deploy_002, etc.
             "service": random.choice(SERVICES),

@@ -44,6 +44,7 @@ See `.cursor/rules/project-workflow.mdc` for the full agent workflow (sync READM
 | `GET` | `/health` | Liveness check → `{"status": "ok"}` |
 | `GET` | `/deployments` | List deployments, newest first |
 | `GET` | `/deployments/{deployment_id}` | Single deployment by ID |
+| `GET` | `/metrics` | Per-service metrics over a rolling time window |
 
 ### Query filters (`GET /deployments`)
 
@@ -54,13 +55,20 @@ See `.cursor/rules/project-workflow.mdc` for the full agent workflow (sync READM
 
 Both are optional. Omitting them returns all deployments.
 
+### Query filters (`GET /metrics`)
+
+| Param | Notes |
+|-------|-------|
+| `time_range` | Optional integer, default `7`; rolling window in days, must be ≥ 1 |
+
 ### Error behavior
 
 | Case | Status | Body |
 |------|--------|------|
 | Unknown deployment ID | `404` | `{"detail": "Deployment not found"}` |
 | Invalid query enum value | `422` | FastAPI/Pydantic validation detail |
-| Success | `200` | Deployment JSON or list |
+| Invalid `time_range` (≤ 0) | `422` | FastAPI validation detail (`ge=1`) |
+| Success | `200` | Deployment JSON, list, or metrics list |
 
 ## Data model
 
@@ -75,12 +83,22 @@ Both are optional. Omitting them returns all deployments.
 | `timestamp` | string | ISO-8601 UTC with `Z` suffix |
 | `commit_sha` | string | Short hex commit identifier |
 
+`MetricData` (defined in `app/models.py`):
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `service` | string | Service name |
+| `failure_rate` | float | Fraction of failed deployments |
+| `deployment_rate` | float | Deployments per time unit |
+| `p95_duration` | float or null | 95th percentile duration in seconds; null when fewer than 5 deployments in the window |
+
 ## Key implementation details
 
 - **`DeploymentStore`** holds a `Dict[str, Deployment]` keyed by `id`.
 - **`store.list()`** filters by optional `service`/`status`, sorts by `timestamp` descending.
 - **`store.get()`** returns `Optional[Deployment]`; `main.py` maps `None` → `404`.
-- **Seed data** uses `random.seed(30)` so runs are reproducible across restarts.
+- **`MetricOps`** (`services/metrics.py`) computes per-service `MetricData` from `DeploymentStore.list()`, filtered to a rolling UTC window (default 7 days) via ISO timestamp comparison. Raises `ValueError` when `time_range <= 0`.
+- **Seed data** uses `random.seed(30)` so service, status, and duration choices are reproducible across restarts; timestamps are spread randomly over the **past 28 days** from startup time.
 - Typo in codebase: function is named `generate_deployements` (missing second **n**).
 
 ## Root files agents should keep in sync

@@ -49,6 +49,7 @@ Open in a browser:
 | `GET` | `/health` | Health check |
 | `GET` | `/deployments` | List all deployments (optional filters) |
 | `GET` | `/deployments/{deployment_id}` | Get a single deployment by ID |
+| `GET` | `/metrics` | Per-service metrics over a rolling time window |
 
 ### Query parameters (`GET /deployments`)
 
@@ -56,6 +57,12 @@ Open in a browser:
 |-----------|------|-------------|
 | `service` | string (optional) | Filter by service name (e.g. `billing-api`) |
 | `status` | string (optional) | Filter by status: `success`, `failed`, or `rolled_back` |
+
+### Query parameters (`GET /metrics`)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `time_range` | integer (optional, default `7`) | Rolling window in days; must be ≥ 1 |
 
 ### Example requests
 
@@ -77,6 +84,12 @@ curl "http://localhost:8000/deployments?service=auth-service&status=failed"
 
 # Get a single deployment by ID
 curl http://localhost:8000/deployments/deploy_001
+
+# Per-service metrics (default 7-day window)
+curl http://localhost:8000/metrics
+
+# Metrics over a 14-day window
+curl "http://localhost:8000/metrics?time_range=14"
 ```
 
 ### Example responses
@@ -106,6 +119,27 @@ curl http://localhost:8000/deployments/deploy_001
 {"detail": "Deployment not found"}
 ```
 
+**`GET /metrics`**
+
+```json
+[
+  {
+    "service": "auth-service",
+    "failure_rate": 0.42857142857142855,
+    "deployment_rate": 1.0,
+    "p95_duration": 601.0
+  },
+  {
+    "service": "billing-api",
+    "failure_rate": 0.1111111111111111,
+    "deployment_rate": 1.2857142857142858,
+    "p95_duration": 626.0
+  }
+]
+```
+
+**`GET /metrics?time_range=0`** returns `422` with a FastAPI validation error (`time_range` must be ≥ 1).
+
 ---
 
 ## Cursor project rules
@@ -126,8 +160,8 @@ This repo includes an always-applied Cursor rule at `.cursor/rules/project-workf
 | `CONTEXT.md` | Agent onboarding: architecture, API contract, conventions, and what to keep in sync. |
 | `requirements.txt` | Python dependencies: FastAPI, Uvicorn, and Pydantic. |
 | `.cursor/rules/project-workflow.mdc` | Always-applied Cursor rule: sync root docs after app changes, evaluate edge cases, keep HTTP errors in `main.py`. |
-| `app/main.py` | FastAPI application entry point. Defines HTTP routes (`/health`, `/deployments`), loads seed data on startup, and delegates business logic to the store. |
-| `app/models.py` | Pydantic data models. Defines the `Deployment` schema and allowed `status` values (`success`, `failed`, `rolled_back`). |
+| `app/main.py` | FastAPI application entry point. Defines HTTP routes (`/health`, `/deployments`, `/metrics`), loads seed data on startup, and delegates business logic to the store and services. |
+| `app/models.py` | Pydantic data models. Defines `Deployment` (with allowed `status` values) and `MetricData` (service metrics). |
 | `app/store.py` | In-memory data store (`DeploymentStore`). Handles loading, listing (with optional filters), and fetching deployments by ID. |
-| `app/seed.py` | Generates deterministic sample deployment data (35 records across 4 services) used to populate the store on startup. |
-| `services/metrics.py` | Reusable logic in the `services/` layer (no FastAPI imports). |
+| `app/seed.py` | Generates sample deployment data (35 records across 4 services) with timestamps in the past 28 days; loaded on startup. |
+| `services/metrics.py` | `MetricOps` — filters deployments by time range and computes per-service `MetricData` (failure rate, deployment rate, p95 duration). |

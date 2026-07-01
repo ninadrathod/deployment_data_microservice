@@ -13,3 +13,9 @@ class Deployment(BaseModel):
     duration: int = Field(ge=0, description="Duration in seconds")
     timestamp: str # keep as str; ISO format validated by convention
     commit_sha: str
+
+class MetricData(BaseModel):
+    service: str
+    failure_rate: float
+    deployment_rate: float
+    p95_duration: float | None
