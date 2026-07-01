@@ -123,6 +123,7 @@ This repo includes an always-applied Cursor rule at `.cursor/rules/project-workf
 | File | Description |
 |------|-------------|
 | `README.md` | Project documentation (setup, API usage, file overview). |
+| `CONTEXT.md` | Agent onboarding: architecture, API contract, conventions, and what to keep in sync. |
 | `requirements.txt` | Python dependencies: FastAPI, Uvicorn, and Pydantic. |
 | `.cursor/rules/project-workflow.mdc` | Always-applied Cursor rule: sync root docs after app changes, evaluate edge cases, keep HTTP errors in `main.py`. |
 | `app/main.py` | FastAPI application entry point. Defines HTTP routes (`/health`, `/deployments`), loads seed data on startup, and delegates business logic to the store. |

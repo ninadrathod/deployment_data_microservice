@@ -12,10 +12,11 @@ Apply these checks on every code change in this repo.
 When code under `app/` (or `services/`) changes, update root files in the same task:
 
 - **README.md** — routes, params, response/error examples, setup commands, project files table
-
-When `.cursor/rules/` changes (add, edit, or remove), update **README.md** in the same task: project files table and any Cursor rules section that describes them.
+- **CONTEXT.md** — architecture, API surface, data model, conventions, dependencies, and out-of-scope sections (agent onboarding doc; keep in sync with code, not a duplicate of README)
 - **requirements.txt** — add or bump deps only when new imports require them (`package>=version`)
 - **.gitignore** — only when new generated artifacts, local config, or secrets paths appear
+
+When `.cursor/rules/` changes (add, edit, or remove), update **README.md** and **CONTEXT.md** in the same task if they describe project rules or workflow conventions.
 
 ## 2. Evaluate edge cases and error codes
 
@@ -32,7 +33,7 @@ Before finishing any edit, consider invalid inputs and failure modes:
 | Invalid client input | `400` or `422` (FastAPI/Pydantic validation) |
 | Success | `200` with the documented response model |
 
-Update README examples when the API contract changes.
+Update README examples and **CONTEXT.md** (API surface, error behavior, data model) when the API contract changes.
 
 ## 3. Error handling lives in main.py
 
