@@ -1,0 +1,59 @@
+---
+description: Sync root docs, evaluate edge cases, and centralize HTTP errors in main.py
+alwaysApply: true
+---
+
+# Project Workflow
+
+Apply these checks on every code change in this repo.
+
+## 1. Sync root files after app/ edits
+
+When code under `app/` (or `services/`) changes, update root files in the same task:
+
+- **README.md** — routes, params, response/error examples, setup commands, project files table
+
+When `.cursor/rules/` changes (add, edit, or remove), update **README.md** in the same task: project files table and any Cursor rules section that describes them.
+- **requirements.txt** — add or bump deps only when new imports require them (`package>=version`)
+- **.gitignore** — only when new generated artifacts, local config, or secrets paths appear
+
+## 2. Evaluate edge cases and error codes
+
+Before finishing any edit, consider invalid inputs and failure modes:
+
+- **Path params**: unknown IDs, empty or malformed values
+- **Query params**: invalid enum values, empty strings
+- **Request bodies** (if added): missing fields, wrong types, out-of-range values
+- **Store/service**: empty list vs not-found, `None` returns, duplicate IDs on load
+
+| Situation | Expected response |
+|-----------|-------------------|
+| Resource not found | `404` with `{"detail": "..."}` |
+| Invalid client input | `400` or `422` (FastAPI/Pydantic validation) |
+| Success | `200` with the documented response model |
+
+Update README examples when the API contract changes.
+
+## 3. Error handling lives in main.py
+
+`app/main.py` is the HTTP layer only. All HTTP status codes and error payloads are decided there.
+
+| Layer | Role | Errors |
+|-------|------|--------|
+| `app/main.py` | Routes, `HTTPException`, response models | Raise `HTTPException(status_code=..., detail=...)` |
+| `app/store.py` | Business logic, in-memory data | Return `None`, empty lists, or values—never HTTP errors |
+| `app/models.py` | Pydantic schemas | Validation only; no FastAPI imports |
+| `services/` | Reusable logic | Return results or domain exceptions—no `HTTPException` |
+
+```python
+# store.py
+def get(self, deployment_id: str) -> Optional[Deployment]:
+    return self._data.get(deployment_id)
+
+# main.py
+deployment = store.get(deployment_id)
+if deployment is None:
+    raise HTTPException(status_code=404, detail="Deployment not found")
+```
+
+Do not import `HTTPException` or `FastAPI` in `store.py`, `models.py`, or `services/`. Keep route handlers thin: validate input, call store/services, map failures to `HTTPException` in `main.py`.

@@ -108,13 +108,25 @@ curl http://localhost:8000/deployments/deploy_001
 
 ---
 
+## Cursor project rules
+
+This repo includes an always-applied Cursor rule at `.cursor/rules/project-workflow.mdc`. It tells the AI (and documents for humans) how to work in this codebase:
+
+1. **Sync root docs** — When `app/` or `services/` code changes, update `README.md`, `requirements.txt`, and `.gitignore` in the same task.
+2. **Edge cases and HTTP codes** — Consider invalid inputs; use `404` for not found, `400`/`422` for bad input, `200` on success.
+3. **Errors in `main.py` only** — Routes raise `HTTPException`; `store.py`, `models.py`, and `services/` return values or domain errors, never HTTP responses.
+
+---
+
 ## Project files
 
 | File | Description |
 |------|-------------|
 | `README.md` | Project documentation (setup, API usage, file overview). |
 | `requirements.txt` | Python dependencies: FastAPI, Uvicorn, and Pydantic. |
+| `.cursor/rules/project-workflow.mdc` | Always-applied Cursor rule: sync root docs after app changes, evaluate edge cases, keep HTTP errors in `main.py`. |
 | `app/main.py` | FastAPI application entry point. Defines HTTP routes (`/health`, `/deployments`), loads seed data on startup, and delegates business logic to the store. |
 | `app/models.py` | Pydantic data models. Defines the `Deployment` schema and allowed `status` values (`success`, `failed`, `rolled_back`). |
 | `app/store.py` | In-memory data store (`DeploymentStore`). Handles loading, listing (with optional filters), and fetching deployments by ID. |
 | `app/seed.py` | Generates deterministic sample deployment data (35 records across 4 services) used to populate the store on startup. |
+| `services/metrics.py` | Reusable logic in the `services/` layer (no FastAPI imports). |
